@@ -45,7 +45,7 @@ jobs:
         if: matrix.rid == 'linux-x64'
         run: >-
           dotnet test tests/VelaShell.Tests/VelaShell.Tests.csproj
-          -c Release -p:SignAssembly=false
+          -c Debug
           --filter FullyQualifiedName~LinuxPackagingMetadataTests
           --nologo
 
