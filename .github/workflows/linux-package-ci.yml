@@ -1,0 +1,75 @@
+name: Linux package CI
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+    paths:
+      - '.github/workflows/linux-package-ci.yml'
+      - '.github/workflows/release.yml'
+      - 'build/linux/**'
+      - 'plugins/**'
+      - 'src/**'
+      - 'tests/VelaShell.Tests/Packaging/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            runner: ubuntu-24.04
+            deb_arch: amd64
+            rpm_arch: x86_64
+          - rid: linux-arm64
+            runner: ubuntu-24.04-arm
+            deb_arch: arm64
+            rpm_arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Test packaging metadata
+        if: matrix.rid == 'linux-x64'
+        run: >-
+          dotnet test tests/VelaShell.Tests/VelaShell.Tests.csproj
+          -c Release -p:SignAssembly=false
+          --filter FullyQualifiedName~LinuxPackagingMetadataTests
+          --nologo
+
+      - name: Publish and package (${{ matrix.rid }})
+        run: |
+          set -euo pipefail
+          version="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+          rid='${{ matrix.rid }}'
+          name="VelaShell-$version-$rid"
+          # CI 验证包不持有正式签名密钥；Release 工作流仍使用 STRONG_NAME_KEY。
+          VELASHELL_SIGN_ASSEMBLY=false \
+            build/linux/build-linux.sh "$version" "$rid" out dist
+
+          test -s "dist/$name.tar.gz"
+          test -s "dist/$name.deb"
+          test -s "dist/$name.rpm"
+          test "$(dpkg-deb --field "dist/$name.deb" Architecture)" = '${{ matrix.deb_arch }}'
+          dpkg-deb --contents "dist/$name.deb" | grep -F './usr/bin/velashell'
+          dpkg-deb --contents "dist/$name.deb" | grep -F './usr/share/applications/io.github.joesdu.VelaShell.desktop'
+          test "$(rpm --query --package --queryformat '%{ARCH}' "dist/$name.rpm")" = '${{ matrix.rpm_arch }}'
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-package-smoke-${{ matrix.rid }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 3

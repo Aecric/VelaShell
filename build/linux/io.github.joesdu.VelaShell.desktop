@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=VelaShell
+Comment=SSH and SFTP terminal client
+Exec=velashell %u
+TryExec=velashell
+Icon=io.github.joesdu.VelaShell
+Type=Application
+Categories=Network;RemoteAccess;
+Terminal=false
+StartupWMClass=VelaShell.App
+MimeType=x-scheme-handler/ssh;x-scheme-handler/sftp;

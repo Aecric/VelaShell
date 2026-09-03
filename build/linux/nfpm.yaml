@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=https://nfpm.goreleaser.com/schema.json
+name: velashell
+arch: ${VELASHELL_ARCH}
+platform: linux
+version: ${VELASHELL_VERSION}
+version_schema: semver
+release: "1"
+section: net
+priority: optional
+maintainer: VelaShell maintainers <dygood@outlook.com>
+description: |
+  A modern cross-platform SSH and SFTP terminal client.
+  VelaShell includes a GPU-accelerated terminal, file transfer tools, tunnels,
+  remote monitoring, and a dual-mode plugin runtime.
+vendor: VelaShell
+homepage: https://github.com/joesdu/VelaShell
+license: AGPL-3.0-or-later
+umask: 0o022
+contents:
+  - src: ${VELASHELL_INPUT}/
+    dst: /usr/lib/velashell
+    type: tree
+    expand: true
+  - src: /usr/lib/velashell/VelaShell
+    dst: /usr/bin/velashell
+    type: symlink
+  - src: ./build/linux/io.github.joesdu.VelaShell.desktop
+    dst: /usr/share/applications/io.github.joesdu.VelaShell.desktop
+    file_info:
+      mode: 0644
+  - src: ./src/VelaShell/Assets/velashell.png
+    dst: /usr/share/icons/hicolor/1024x1024/apps/io.github.joesdu.VelaShell.png
+    file_info:
+      mode: 0644
+  - src: ./LICENSE
+    dst: /usr/share/licenses/velashell/LICENSE
+    file_info:
+      mode: 0644
+  - src: ./LICENSE
+    dst: /usr/share/doc/velashell/copyright
+    packager: deb
+    file_info:
+      mode: 0644
+overrides:
+  deb:
+    depends:
+      - libx11-6
+      - libice6
+      - libsm6
+      - libfontconfig1
+      - ca-certificates
+      - tzdata
+      - libc6
+      - libgcc-s1 | libgcc1
+      - libgssapi-krb5-2
+      - libstdc++6
+      - zlib1g
+      - libssl3t64 | libssl3
+      - libicu76 | libicu74 | libicu72 | libicu70
+  rpm:
+    depends:
+      - libX11
+      - libICE
+      - libSM
+      - fontconfig
+      - ca-certificates
+      - tzdata
+      - glibc
+      - libgcc
+      - krb5-libs
+      - libstdc++
+      - zlib
+      - openssl-libs
+      - libicu
+rpm:
+  group: Applications/Internet
+  compression: gzip:9
+deb:
+  compression: xz

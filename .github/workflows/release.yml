@@ -2,7 +2,7 @@
 # 三平台原生 runner 构建 self-contained 产物,统一附加到该 Release:
 #   Windows x64/arm64 → zip
 #   macOS   x64/arm64 → tar.gz + dmg(未签名/未公证;Unix 可执行位在原生 runner 上保留)
-#   Linux   x64/arm64 → tar.gz
+#   Linux   x64/arm64 → tar.gz + deb + rpm
 # 随包分发的插件(plugins/<目录名>/,目录名 = id 把点换成短横,原因见 macOS job 的签名一步)
 # **只有本仓库 plugins/ 下自建的那些**(当前是 AI 插件 velashell.ai),随 publish 一起构建、
 # 由 src/VelaShell/VelaShell.csproj 的 AddVelaPluginsToPublish 登记入包。
@@ -248,7 +248,15 @@ jobs:
           if-no-files-found: error
 
   build-linux:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            runner: ubuntu-24.04
+          - rid: linux-arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
@@ -259,24 +267,19 @@ jobs:
         run: echo "$SNK_B64" | openssl base64 -A -d > src/VelaShell.snk
         env:
           SNK_B64: ${{ secrets.STRONG_NAME_KEY }}
-      - name: Publish (linux-x64 / linux-arm64)
+      - name: Publish and package (${{ matrix.rid }})
         run: |
           set -euo pipefail
           version="${TAG_NAME#v}"
-          mkdir -p dist
-          for rid in linux-x64 linux-arm64; do
-            name="VelaShell-$version-$rid"
-            dotnet publish "$PROJECT" -c Release -r "$rid" -o "out/$name" \
-              -p:Version="$version" -p:SelfContained=true -p:DebugType=None --nologo
-            # 两个可执行体:主程序,以及隔离插件的宿主进程(由主程序按需拉起)。
-            chmod +x "out/$name/VelaShell" "out/$name/VelaShell.PluginHost"
-            tar -czf "dist/$name.tar.gz" -C "out/$name" .
-          done
+          rid='${{ matrix.rid }}'
+          # tar.gz 继续是便携版与应用内自更新载荷;deb/rpm 只是包管理器安装资产,
+          # 绝不得写入 latest.json(安装目录只读,不能走原地换版)。
+          build/linux/build-linux.sh "$version" "$rid" out dist
         env:
           TAG_NAME: ${{ github.event.release.tag_name || inputs.tag }}
       - uses: actions/upload-artifact@v7
         with:
-          name: packages-linux
+          name: packages-linux-${{ matrix.rid }}
           path: dist/*
           if-no-files-found: error
 
