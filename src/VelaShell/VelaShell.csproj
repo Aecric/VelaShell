@@ -96,6 +96,39 @@
     </ItemGroup>
   </Target>
 
+  <!--
+    SSH 库的版本要单独取一次:它不在 Directory.Packages.props 里 —— X11 转发那套 API 只在
+    Aecric/Tmds.Ssh 的 feature/x11-forwarding 分支上,而那个 fork 没有 nuget.org 的发布权限,
+    所以宿主引的是 external/Tmds.Ssh 这个 submodule 的**工程引用**
+    (见 src/VelaShell.Infrastructure/VelaShell.Infrastructure.csproj 那一处的注释)。
+    上面那个目标遍历的是 PackageVersion 项,自然扫不到它,于是关于页会退化成一个光秃秃的
+    "Tmds.Ssh" —— 用户看不到自己在跑哪一版 SSH 库,报障时也问不出来。
+
+    版本号从 fork 自己的 Directory.Build.props 里读(它就是那份的事实来源),不在这里写死 ——
+    写死就又是关于页曾经漂移过的那个老毛病。后面缀 +x11-fork:它与 nuget 上的 0.24.0 同号
+    但不同码,不加这个标记等于在关于页上撒谎。
+
+    上游合并或 fork 发包之后:删掉这整个目标,把 PackageVersion 抬回 Directory.Packages.props。
+  -->
+  <Target Name="EmbedForkedSshLibraryVersion" BeforeTargets="GetAssemblyAttributes">
+    <PropertyGroup>
+      <_TmdsSshPropsFile>$(MSBuildThisFileDirectory)..\..\external\Tmds.Ssh\Directory.Build.props</_TmdsSshPropsFile>
+    </PropertyGroup>
+    <!-- submodule 没检出时(忘了带 submodule 参数)整个构建本来就过不去,这里只是不至于
+         额外抛一个看不懂的 XmlPeek 错误、把真正的原因盖掉。 -->
+    <XmlPeek XmlInputPath="$(_TmdsSshPropsFile)"
+             Query="//*[local-name()='VersionPrefix']/text()"
+             Condition="Exists('$(_TmdsSshPropsFile)')">
+      <Output TaskParameter="Result" ItemName="_TmdsSshVersionPrefix" />
+    </XmlPeek>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute" Condition="'@(_TmdsSshVersionPrefix)' != ''">
+        <_Parameter1>PackageVersion:Tmds.Ssh</_Parameter1>
+        <_Parameter2>@(_TmdsSshVersionPrefix)+x11-fork</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <ProjectReference Include="..\VelaShell.Core\VelaShell.Core.csproj" />
     <ProjectReference Include="..\VelaShell.Terminal\VelaShell.Terminal.csproj" />

@@ -1,0 +1,4 @@
+[submodule "external/Tmds.Ssh"]
+	path = external/Tmds.Ssh
+	url = https://github.com/Aecric/Tmds.Ssh.git
+	branch = feature/x11-forwarding

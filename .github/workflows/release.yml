@@ -80,6 +80,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # external/Tmds.Ssh 是 submodule(X11 转发的那份 fork,见
+          # src/VelaShell.Infrastructure/VelaShell.Infrastructure.csproj 的注释)。
+          # 它现在是**工程引用**,不检出就直接编译失败。
+          submodules: true
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
@@ -124,6 +129,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # external/Tmds.Ssh 是 submodule(X11 转发的那份 fork,见
+          # src/VelaShell.Infrastructure/VelaShell.Infrastructure.csproj 的注释)。
+          # 它现在是**工程引用**,不检出就直接编译失败。
+          submodules: true
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
@@ -154,6 +164,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # external/Tmds.Ssh 是 submodule(X11 转发的那份 fork,见
+          # src/VelaShell.Infrastructure/VelaShell.Infrastructure.csproj 的注释)。
+          # 它现在是**工程引用**,不检出就直接编译失败。
+          submodules: true
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
@@ -282,6 +297,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # external/Tmds.Ssh 是 submodule(X11 转发的那份 fork,见
+          # src/VelaShell.Infrastructure/VelaShell.Infrastructure.csproj 的注释)。
+          # 它现在是**工程引用**,不检出就直接编译失败。
+          submodules: true
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json

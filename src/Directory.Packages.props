@@ -22,7 +22,11 @@
          我们配的是 DB-IP Lite City(CC BY 4.0),同一格式。 -->
     <PackageVersion Include="MaxMind.Db" Version="5.1.0" />
     <PackageVersion Include="SonnetDB.Core" Version="3.1.0" />
-    <PackageVersion Include="Tmds.Ssh" Version="0.24.0" />
+    <!-- Tmds.Ssh 不在这里 —— 它现在是 external/Tmds.Ssh 这个 submodule 的**工程引用**,
+         见 src/VelaShell.Infrastructure/VelaShell.Infrastructure.csproj 那一处的注释。
+         X11 转发那套 API(x11-req + 远端 x11 channel)只在 Aecric/Tmds.Ssh 的
+         feature/x11-forwarding 分支上,nuget.org 上最新的 0.24.0 里没有。
+         上游合并或 fork 发包后:在这里重新登记 PackageVersion 并抬到那一版。 -->
     <!-- FTP / FTPS 客户端(MIT,零依赖)。截至 54.2.0 最高只出到 net9.0 资产,
          本仓库 net11.0 会解析到那一份 —— 纯托管 DLL,且发布不裁剪、非单文件,无打包风险。
          注意:不要顺手引 FluentFTP.GnuTLS(LGPL-2.1-only),与商业授权冲突,

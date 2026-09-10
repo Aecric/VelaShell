@@ -58,6 +58,10 @@ jobs:
       - uses: actions/checkout@v7
         with:
           path: VelaShell
+          # external/Tmds.Ssh 是 submodule(X11 转发的那份 fork,见
+          # src/VelaShell.Infrastructure/VelaShell.Infrastructure.csproj 的注释)。
+          # 它现在是**工程引用**,不检出就直接编译失败。
+          submodules: true
 
       # 快捷键总表与文档仓库里那份《快捷键参考》要逐条对齐,把关的用例是
       # ShortcutCatalogTests.Doc_ListsEveryCatalogEntry —— 文档在另一个仓库,拿不到就

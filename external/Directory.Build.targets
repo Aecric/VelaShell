@@ -1,0 +1,17 @@
+<Project>
+  <!--
+    ================ 别删:这是一道「到此为止」的墙 ================
+    external/ 下面是**别的仓库**(Tmds.Ssh 的 fork,以 submodule 钉在 external/Tmds.Ssh)。
+    MSBuild 找 Directory.Build.targets 的规则是从工程目录逐级往上找**第一个**,
+    而 fork 自己没有这个文件 —— 少了这道墙,它会一路找到仓库根的那份,于是:
+
+      Directory.Build.targets 的 CheckTargetFramework 会因为 Tmds.Ssh.csproj 里
+      显式写了 <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
+      直接 Error 掉 —— 那条规则是给**本仓**的工程定的(本仓统一由根 props 给
+      TargetFramework),对一个多目标的第三方库不成立。
+
+    所以这里放一个空工程把向上查找截断。Directory.Build.props 不需要同样的墙:
+    fork 自带 external/Tmds.Ssh/Directory.Build.props(以及 src/ 下那份转发),
+    查找在它那儿就停了。Directory.Packages.props 同理(fork 自带一份)。
+  -->
+</Project>

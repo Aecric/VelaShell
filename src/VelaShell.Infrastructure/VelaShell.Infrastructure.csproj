@@ -15,7 +15,14 @@
     <PackageReference Include="FluentFTP" />
     <PackageReference Include="MaxMind.Db" />
     <PackageReference Include="SonnetDB.Core" />
-    <PackageReference Include="Tmds.Ssh" />
+    <!-- SSH/SFTP。**不是 nuget 包,而是 external/Tmds.Ssh 这个 submodule 的工程引用** ——
+         X11 转发(x11-req + 远端 x11 channel)只在 Aecric/Tmds.Ssh 的 feature/x11-forwarding
+         分支上,上游 0.24.0 与 nuget 上都没有那套 API,而 fork 没有 nuget.org 的发布权限。
+         submodule 钉死在一个提交上,CI 与别人的机器 clone 下来编出的是同一份 —— 既不用猜
+         一个还不存在的版本号,也不用造本地包(那两条都被 AGENTS.md 明令禁止)。
+         上游合并或 fork 发包之后:改回 PackageReference、把 PackageVersion 抬到那一版、
+         删掉 submodule 与 external/Directory.Build.targets。 -->
+    <ProjectReference Include="..\..\external\Tmds.Ssh\src\Tmds.Ssh\Tmds.Ssh.csproj" />
     <!-- DPAPI(CurrentUser)包裹本地 AES 密钥文件;仅 Windows 运行时可用,其余平台已代码守卫。 -->
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
   </ItemGroup>
