@@ -4564,4 +4564,46 @@ Choose how much to clean up. Every option rebuilds the store so the space is gen
   <data name="SetTransfer_AutoUploadOnEditDesc" xml:space="preserve">
     <value>Off: the local copy is not watched at all and nothing is sent back</value>
   </data>
+  <data name="X11Forwarding" xml:space="preserve">
+    <value>Linux graphical windows (X11)</value>
+  </data>
+  <data name="X11ForwardingHint" xml:space="preserve">
+    <value>Opens remote X11 applications (xclock, GUI editors) as windows on this desktop. The server needs X11Forwarding yes and a working xauth. Trusted forwarding: a remote application can read this display's keystrokes and screen contents.</value>
+  </data>
+  <data name="X11TestLocalServer" xml:space="preserve">
+    <value>Test local X server</value>
+  </data>
+  <data name="Msg_X11Ready" xml:space="preserve">
+    <value>X11 forwarding is on (DISPLAY {0}) — remote graphical windows will open on this desktop</value>
+  </data>
+  <data name="Msg_X11RejectedByServer" xml:space="preserve">
+    <value>The server refused X11 forwarding — set X11Forwarding yes in sshd_config and install xauth. The terminal itself is unaffected.</value>
+  </data>
+  <data name="Msg_X11Unavailable" xml:space="preserve">
+    <value>X11 forwarding is off: {0}</value>
+  </data>
+  <data name="Msg_X11StatusPlatformUnsupported" xml:space="preserve">
+    <value>this platform is not supported yet (Linux only in this version)</value>
+  </data>
+  <data name="Msg_X11StatusNoDisplay" xml:space="preserve">
+    <value>no local X display found (DISPLAY is not set)</value>
+  </data>
+  <data name="Msg_X11StatusDisplayNotLocal" xml:space="preserve">
+    <value>DISPLAY points at a remote X server; only local displays are supported</value>
+  </data>
+  <data name="Msg_X11StatusDisplayMalformed" xml:space="preserve">
+    <value>DISPLAY could not be parsed</value>
+  </data>
+  <data name="Msg_X11StatusXauthMissing" xml:space="preserve">
+    <value>xauth is not installed on this machine (Debian/Ubuntu: apt install xauth)</value>
+  </data>
+  <data name="Msg_X11StatusXauthFailed" xml:space="preserve">
+    <value>xauth could not be run</value>
+  </data>
+  <data name="Msg_X11StatusCookieMissing" xml:space="preserve">
+    <value>xauth has no MIT-MAGIC-COOKIE-1 entry for this display</value>
+  </data>
+  <data name="Msg_X11StatusServerUnreachable" xml:space="preserve">
+    <value>the local X server is not accepting connections</value>
+  </data>
 </root>

@@ -596,6 +596,39 @@
                        Foreground="{DynamicResource VelaTextMuted}" FontSize="{DynamicResource VelaFontSize10}" TextWrapping="Wrap" />
           </StackPanel>
 
+          <!-- X11 转发:远端图形应用的窗口开在本机桌面。只对 SSH 出现(x11-req 挂在 shell 通道上)。
+               「测试本机 X Server」只测本机那一半 —— DISPLAY、xauth、X Server 在不在听;
+               远端那一半(sshd 的 X11Forwarding 与 xauth)只有真连上去才知道,那句结论在
+               连接时由终端里的灰色提示给出。两半分开说,免得测试通过的人以为万事俱备。
+               提示文案里必须留着「远端应用能读本机键盘与屏幕」那句:第一版是 trusted 转发,
+               等价于 ssh -Y,不是 ssh -X 的 X SECURITY 隔离。 -->
+          <StackPanel IsVisible="{Binding SupportsPostAuthCommand}" Spacing="4" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <CheckBox IsChecked="{Binding EnableX11Forwarding}"
+                        Padding="0" MinHeight="0" VerticalAlignment="Center">
+                <TextBlock Text="{loc:Localize X11Forwarding}"
+                           Margin="6,0,0,0"
+                           Foreground="{DynamicResource VelaTextSecondary}"
+                           FontSize="{DynamicResource VelaFontSize11}" FontWeight="Medium" />
+              </CheckBox>
+              <Button Classes="dlg-outline" Command="{Binding TestX11DisplayCommand}"
+                      IsVisible="{Binding EnableX11Forwarding}">
+                <TextBlock Text="{loc:Localize X11TestLocalServer}" VerticalAlignment="Center" />
+              </Button>
+            </StackPanel>
+            <!-- 提示常显,不跟着勾选走:它同时回答「这个开关是干什么的」和「打开它等于交出什么」。
+                 藏在勾选之后 = 先让人勾上再告知,而本页其余几处提示(跳板、认证后命令、会话覆盖)
+                 也都是常显的。 -->
+            <TextBlock Text="{loc:Localize X11ForwardingHint}"
+                       Foreground="{DynamicResource VelaTextMuted}"
+                       FontSize="{DynamicResource VelaFontSize10}" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding X11TestResult}"
+                       IsVisible="{Binding X11TestResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       Foreground="{DynamicResource VelaTextSecondary}"
+                       FontFamily="{DynamicResource VelaUiMonoFont}"
+                       FontSize="{DynamicResource VelaFontSize10}" TextWrapping="Wrap" />
+          </StackPanel>
+
           <!-- 会话级终端覆盖(F-06):全局设置只能有一套,但机器不是一样的 ——
                堡垒机输出 GBK、开发机 UTF-8;生产环境希望标签一眼看出是红的。
                这些差异按机器走,挤进一个全局开关里就只能二选一。

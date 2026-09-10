@@ -4992,4 +4992,46 @@ Windows 填 exe 完整路徑或命令名稱(如 notepad);Linux 填命令名稱(�
   <data name="SetTransfer_AutoUploadOnEditDesc" xml:space="preserve">
     <value>關閉後完全不監看本機副本，變更一律不回傳</value>
   </data>
+  <data name="X11Forwarding" xml:space="preserve">
+    <value>Linux 圖形視窗（X11）</value>
+  </data>
+  <data name="X11ForwardingHint" xml:space="preserve">
+    <value>遠端 X11 應用程式（xclock、圖形編輯器）的視窗直接開在本機桌面。伺服器需要開啟 X11Forwarding 並裝有可用的 xauth。以信任方式轉送：遠端應用程式能讀取本機 display 上的鍵盤輸入與螢幕內容。</value>
+  </data>
+  <data name="X11TestLocalServer" xml:space="preserve">
+    <value>測試本機 X Server</value>
+  </data>
+  <data name="Msg_X11Ready" xml:space="preserve">
+    <value>X11 轉送已啟用（DISPLAY {0}）—— 遠端圖形視窗會開在本機桌面</value>
+  </data>
+  <data name="Msg_X11RejectedByServer" xml:space="preserve">
+    <value>伺服器拒絕了 X11 轉送 —— 請在 sshd_config 裡開啟 X11Forwarding 並安裝 xauth。一般終端不受影響。</value>
+  </data>
+  <data name="Msg_X11Unavailable" xml:space="preserve">
+    <value>X11 轉送未啟用：{0}</value>
+  </data>
+  <data name="Msg_X11StatusPlatformUnsupported" xml:space="preserve">
+    <value>目前平台暫不支援（這一版只做了 Linux）</value>
+  </data>
+  <data name="Msg_X11StatusNoDisplay" xml:space="preserve">
+    <value>找不到本機 X display（DISPLAY 未設定）</value>
+  </data>
+  <data name="Msg_X11StatusDisplayNotLocal" xml:space="preserve">
+    <value>DISPLAY 指向遠端 X Server，只支援本機 display</value>
+  </data>
+  <data name="Msg_X11StatusDisplayMalformed" xml:space="preserve">
+    <value>DISPLAY 的格式無法識別</value>
+  </data>
+  <data name="Msg_X11StatusXauthMissing" xml:space="preserve">
+    <value>本機沒裝 xauth（Debian/Ubuntu：apt install xauth）</value>
+  </data>
+  <data name="Msg_X11StatusXauthFailed" xml:space="preserve">
+    <value>xauth 沒能執行起來</value>
+  </data>
+  <data name="Msg_X11StatusCookieMissing" xml:space="preserve">
+    <value>xauth 裡沒有這個 display 的 MIT-MAGIC-COOKIE-1 項目</value>
+  </data>
+  <data name="Msg_X11StatusServerUnreachable" xml:space="preserve">
+    <value>本機 X Server 不接受連線</value>
+  </data>
 </root>

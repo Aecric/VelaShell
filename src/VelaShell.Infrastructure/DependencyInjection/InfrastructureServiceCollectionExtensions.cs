@@ -26,6 +26,7 @@ using VelaShell.Infrastructure.Plugins.Protocols;
 using VelaShell.Infrastructure.Sftp;
 using VelaShell.Infrastructure.Ssh;
 using VelaShell.Infrastructure.Tunnels;
+using VelaShell.Infrastructure.X11;
 using VelaConnectionInfo = VelaShell.Core.Models.ConnectionInfo;
 
 namespace VelaShell.Infrastructure.DependencyInjection;
@@ -116,6 +117,10 @@ public static class InfrastructureServiceCollectionExtensions
                 async () => (await settings.GetSnapshotAsync().ConfigureAwait(false)).Notifications.FeedUrl,
                 HttpAnnouncementFeed.DescribeAudience);
         });
+
+        // 本机 X11 display 探测(X11 转发用)。无状态、每次调用现探 —— cookie 会随
+        // X Server 重启而变,缓存下来只会在下一次重连时拿一个已经作废的 cookie 去连。
+        services.AddSingleton<IX11DisplayService>(_ => new X11DisplayService());
 
         // SSH connection service
         services.AddSingleton<ISshConnectionService>(sp =>

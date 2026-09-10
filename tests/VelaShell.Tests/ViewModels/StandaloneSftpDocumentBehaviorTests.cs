@@ -112,7 +112,7 @@ public sealed class StandaloneSftpDocumentBehaviorTests
                 Arg.Any<uint>(),
                 Arg.Any<uint>(),
                 Arg.Any<int>(),
-                Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<CancellationToken>()
+                Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<X11ForwardingRequest?>(), Arg.Any<CancellationToken>()
             )
             .Returns(shellStream);
 
@@ -137,7 +137,7 @@ public sealed class StandaloneSftpDocumentBehaviorTests
             Arg.Any<uint>(),
             Arg.Any<uint>(),
             Arg.Any<int>(),
-            Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<CancellationToken>()
+            Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<X11ForwardingRequest?>(), Arg.Any<CancellationToken>()
         );
         Assert.AreEqual(0, terminalFactoryCalls, "Explorer SFTP must not open a shell terminal first.");
     }
@@ -635,7 +635,7 @@ public sealed class StandaloneSftpDocumentBehaviorTests
         };
         workflow.ConnectProfileAsync(profile, Arg.Any<CancellationToken>()).Returns(session);
         sshConnectionService.GetClient(session.SessionId).Returns(sshClient);
-        sshClient.CreateShellStreamAsync("xterm-256color", 120, 32, 0, 0, 4096, Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<CancellationToken>()).Returns(shellStream);
+        sshClient.CreateShellStreamAsync("xterm-256color", 120, 32, 0, 0, 4096, Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<X11ForwardingRequest?>(), Arg.Any<CancellationToken>()).Returns(shellStream);
         sftpService.GetWorkingDirectoryAsync(session.SessionId, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult("/home/testuser"));
         sftpService.ListDirectoryAsync(session.SessionId, Arg.Any<string>(), Arg.Any<CancellationToken>())

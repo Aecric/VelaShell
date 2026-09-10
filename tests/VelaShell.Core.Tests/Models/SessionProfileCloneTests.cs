@@ -43,6 +43,7 @@ public sealed class SessionProfileCloneTests
             JumpHostProfileId = Guid.NewGuid(),
             PostAuthCommand = "sudo su -",
             PostAuthCommandDelaySeconds = 3,
+            EnableX11Forwarding = true,
             Ftp = new() { Anonymous = true, MaxConnections = 4, InitialRemotePath = "/srv" },
             PluginProtocolId = "velashell.s3",
             PluginSettings = new() { ["region"] = "cn-north-1" },

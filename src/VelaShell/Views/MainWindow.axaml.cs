@@ -1174,7 +1174,9 @@ public partial class MainWindow : Window
             defaultKeyPath,
             // 协议注册表:连接页据此画出插件协议页签(不装载任何插件程序集),
             // 用户点到某个页签才触发它的惰性激活。
-            app.Services.GetService<Infrastructure.Plugins.Protocols.PluginProtocolRegistry>()
+            app.Services.GetService<Infrastructure.Plugins.Protocols.PluginProtocolRegistry>(),
+            // 「测试本机 X Server」用它;拿不到时那颗按钮如实报「当前平台暂不支持」。
+            app.Services.GetService<Core.Ssh.IX11DisplayService>()
         );
         var dialog = new ConnectionProfileView { DataContext = connectionProfileViewModel };
         SessionProfile? profile = await dialog.ShowDialog<SessionProfile?>(this);

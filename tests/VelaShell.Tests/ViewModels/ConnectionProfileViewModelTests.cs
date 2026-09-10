@@ -88,6 +88,65 @@ public sealed class ConnectionProfileViewModelTests
     }
 
     /// <summary>
+    /// 「Linux 图形窗口」的开关按条配置存,重开对话框要回显。
+    /// 它跟着配置走云同步 —— 存的只是一个布尔,本机的 display / cookie 一概不存。
+    /// </summary>
+    [TestMethod]
+    public async Task X11Forwarding_RoundTripsThroughTheEditDialog()
+    {
+        var existing = new SessionProfile
+        {
+            Name = "gpu-box",
+            Host = "10.0.0.7",
+            Username = "ops",
+            EnableX11Forwarding = true,
+        };
+
+        var vm = new ConnectionProfileViewModel(existing);
+
+        Assert.IsTrue(vm.EnableX11Forwarding);
+        // 这个开关在折叠的「高级选项」里 —— 不展开的话重开对话框看不见它,
+        // 用户会当成配置丢了(与「认证后执行命令」同一条纪律)。
+        Assert.IsTrue(vm.IsAdvancedVisible);
+
+        SessionProfile? saved = await vm.SaveCommand.Execute().FirstAsync();
+        Assert.IsNotNull(saved);
+        Assert.IsTrue(saved.EnableX11Forwarding);
+    }
+
+    /// <summary>
+    /// 换到没有 shell 通道的协议时这个开关必须存成 false。
+    /// <c>x11-req</c> 是挂在 shell 通道上的通道请求,SFTP / FTP / 对象存储根本没有那条通道 ——
+    /// 存成 true 就是 feature-plan 那张 P0 表里的新一条:开关拨了,运行时零消费者。
+    /// </summary>
+    [TestMethod]
+    public async Task X11Forwarding_OnProtocolsWithoutAShell_IsNotSaved()
+    {
+        var vm = new ConnectionProfileViewModel { Host = "h", Username = "u", EnableX11Forwarding = true };
+
+        await vm.SelectConnectionTypeCommand.Execute(ConnectionType.SFTP).FirstAsync();
+
+        SessionProfile? saved = await vm.SaveCommand.Execute().FirstAsync();
+        Assert.IsNotNull(saved);
+        Assert.IsFalse(saved.EnableX11Forwarding);
+    }
+
+    /// <summary>
+    /// 拿不到探测服务(非 Linux,或宿主没注册)时,「测试本机 X Server」也要给一句话 ——
+    /// 一颗点了没反应的按钮比一句「当前平台暂不支持」更让人困惑。
+    /// </summary>
+    [TestMethod]
+    public async Task X11Test_WithoutADisplayService_StillReportsSomething()
+    {
+        var vm = new ConnectionProfileViewModel { Host = "h", Username = "u" };
+
+        await vm.TestX11DisplayCommand.Execute().FirstAsync();
+
+        Assert.IsNotNull(vm.X11TestResult);
+        Assert.DoesNotContain("Msg_X11", vm.X11TestResult, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// FTP / FTPS 的「默认打开路径」:保存时经 <c>FtpSettings</c> 的 setter 归一化,
     /// 重新打开配置要回显,且不能藏在折叠的「高级选项」里(否则用户会当成配置丢了)。
     /// </summary>

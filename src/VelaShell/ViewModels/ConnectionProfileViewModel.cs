@@ -9,6 +9,7 @@ using ReactiveUI.Primitives;
 using VelaShell.Core.Data;
 using VelaShell.Core.Models;
 using VelaShell.Core.Resources;
+using VelaShell.Core.Ssh;
 using VelaShell.Infrastructure.Plugins.Protocols;
 using VelaShell.PluginSdk.Protocols;
 using VelaShell.Presentation.Services;
@@ -34,6 +35,7 @@ public class ConnectionProfileViewModel : ReactiveObject, IDisposable
     private static string UngroupedName => Strings.Get("Msg_Ungrouped");
 
     private readonly IConnectionWorkflowService? _connectionWorkflowService;
+    private readonly IX11DisplayService? _x11DisplayService;
 
     /// <summary>复制成功回执(「已复制」)的停留时长。</summary>
     private static readonly TimeSpan CopyFeedbackDuration = TimeSpan.FromSeconds(2);
@@ -58,6 +60,8 @@ public class ConnectionProfileViewModel : ReactiveObject, IDisposable
     private bool _isKeyAuth;
     private bool _isPasswordAuth = true;
     private Guid? _jumpHostProfileId;
+    private bool _enableX11Forwarding;
+    private string? _x11TestResult;
     private string _name = string.Empty;
     private SecureString? _password;
     private int _port = 22;
@@ -108,9 +112,11 @@ public class ConnectionProfileViewModel : ReactiveObject, IDisposable
         ISessionRepository? sessionRepository = null,
         int defaultPort = 22,
         string? defaultPrivateKeyPath = null,
-        PluginProtocolRegistry? protocolRegistry = null)
+        PluginProtocolRegistry? protocolRegistry = null,
+        IX11DisplayService? x11DisplayService = null)
     {
         _protocolRegistry = protocolRegistry;
+        _x11DisplayService = x11DisplayService;
         _connectionWorkflowService = connectionWorkflowService;
         _sessionRepository = sessionRepository;
         Groups = [new(null, UngroupedName)];
@@ -152,6 +158,7 @@ public class ConnectionProfileViewModel : ReactiveObject, IDisposable
             _jumpHostProfileId = existing.JumpHostProfileId;
             _postAuthCommand = existing.PostAuthCommand;
             _postAuthCommandDelaySeconds = existing.PostAuthCommandDelaySeconds;
+            _enableX11Forwarding = existing.EnableX11Forwarding;
             if (existing.Ftp is { } ftp)
             {
                 _ftpEncryption = ftp.EncryptionMode;
@@ -227,6 +234,8 @@ public class ConnectionProfileViewModel : ReactiveObject, IDisposable
         ConnectCommand = ReactiveCommand.CreateFromTask(ConnectAsync, canExecute);
         CancelCommand = ReactiveCommand.Create(() => (SessionProfile?)null);
         TestConnectionCommand = ReactiveCommand.CreateFromTask(TestConnectionAsync, canExecute);
+        // 不受 canExecute 约束:它要的是主机/端口填对,而探本机 X Server 与目标主机无关。
+        TestX11DisplayCommand = ReactiveCommand.CreateFromTask(TestX11DisplayAsync);
         CopyErrorCommand = ReactiveCommand.CreateFromTask(CopyErrorAsync, this.WhenAnyValue(x => x.ErrorMessage, message => !string.IsNullOrWhiteSpace(message)));
         SelectConnectionTypeCommand = ReactiveCommand.Create<ConnectionType>(SelectConnectionType);
         SelectPluginProtocolCommand = ReactiveCommand.CreateFromTask<string>(SelectPluginProtocolAsync);
@@ -253,7 +262,8 @@ public class ConnectionProfileViewModel : ReactiveObject, IDisposable
         // 与插件高级字段同一条纪律:编辑既有配置时,用户填过的东西不能藏在折叠区里。
         // 「认证后执行命令」/「默认打开路径」不展开的话,重开对话框看到的是一片空白 ——
         // 用户会当成配置丢了,然后再配一遍。
-        if (existing?.PostAuthCommand is { Length: > 0 } || existing?.Ftp?.InitialRemotePath is { Length: > 0 })
+        if (existing?.PostAuthCommand is { Length: > 0 } || existing?.Ftp?.InitialRemotePath is { Length: > 0 }
+            || existing?.EnableX11Forwarding == true)
         {
             IsAdvancedVisible = true;
         }
@@ -873,6 +883,31 @@ public class ConnectionProfileViewModel : ReactiveObject, IDisposable
     /// </summary>
     public bool SupportsPostAuthCommand => ConnectionType == ConnectionType.SSH;
 
+    /// <summary>
+    /// 这条配置的交互 shell 是否请求 X11 转发(远端图形应用的窗口开在本机桌面)。
+    /// 与「认证后执行命令」共用 <see cref="SupportsPostAuthCommand" /> 的可见性:
+    /// 两者都挂在 shell 通道上,别的协议没有那条通道。
+    /// </summary>
+    public bool EnableX11Forwarding
+    {
+        get => _enableX11Forwarding;
+        set => this.RaiseAndSetIfChanged(ref _enableX11Forwarding, value);
+    }
+
+    /// <summary>
+    /// 「测试本机 X Server」的结果文案;null = 还没测过。
+    /// <para>
+    /// 测的是**本机**这一半(DISPLAY、xauth、X Server 在不在听),与目标主机无关 ——
+    /// 远端那一半(<c>X11Forwarding yes</c> 与 <c>xauth</c>)只有真连上去才知道,
+    /// 那句结论在连接时由终端里的提示给出。把两半分开说,免得测试通过的人以为万事俱备。
+    /// </para>
+    /// </summary>
+    public string? X11TestResult
+    {
+        get => _x11TestResult;
+        private set => this.RaiseAndSetIfChanged(ref _x11TestResult, value);
+    }
+
     // ---- 会话级终端覆盖项(F-06) ----
 
     /// <summary>
@@ -1012,6 +1047,9 @@ public class ConnectionProfileViewModel : ReactiveObject, IDisposable
 
     /// <summary>连接测试命令;不落库,仅探测能否连通并回填结果。</summary>
     public ReactiveCommand<RxVoid, RxVoid> TestConnectionCommand { get; }
+
+    /// <summary>「测试本机 X Server」命令:只探本机 display,不连目标主机。</summary>
+    public ReactiveCommand<RxVoid, RxVoid> TestX11DisplayCommand { get; }
 
     /// <summary>
     /// 复制当前错误信息到剪贴板。连接失败的原因常是一长串服务端原文(认证链、
@@ -1187,6 +1225,34 @@ public class ConnectionProfileViewModel : ReactiveObject, IDisposable
     }
 
     /// <summary>
+    /// 探一次本机 X11 display 并把结论回填到界面上。失败原因与连接时终端里那句提示
+    /// 同一处措辞(<see cref="X11NoticeText" />)—— 同一个失败在两个地方说法不同,
+    /// 用户会以为是两回事。
+    /// </summary>
+    private async Task TestX11DisplayAsync()
+    {
+        if (_x11DisplayService is null)
+        {
+            X11TestResult = Strings.Format("Msg_X11Unavailable", Strings.Get("Msg_X11StatusPlatformUnsupported"));
+            return;
+        }
+        try
+        {
+            BeginBusy();
+            X11DisplayProbe probe = await _x11DisplayService.ProbeAsync();
+            X11TestResult = X11NoticeText.Describe(probe);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            X11TestResult = Strings.Format("Msg_X11Unavailable", ex.Message);
+        }
+        finally
+        {
+            EndBusy();
+        }
+    }
+
+    /// <summary>
     /// 把错误信息原文送进剪贴板,并在按钮上留一句「已复制」的回执 ——
     /// 没有回执就分不清"复制成功了"和"按钮没反应",用户只会再点两下。
     /// 回执 <see cref="CopyFeedbackDuration" /> 后自动退回;连点时先取消上一个定时器,
@@ -1267,6 +1333,9 @@ public class ConnectionProfileViewModel : ReactiveObject, IDisposable
             // 命令,而且切回 SSH 时会诈尸执行一次。空白也一律归 null,免得存进一个只有空格的命令。
             PostAuthCommand = postAuthCommand,
             PostAuthCommandDelaySeconds = _postAuthCommandDelaySeconds,
+            // 同 PostAuthCommand:只有 SSH 有 shell 通道可挂 x11-req。换协议还存回 true,
+            // 存下的就是一个永远不生效的开关 —— 那正是 feature-plan P0 表里那一类。
+            EnableX11Forwarding = SupportsPostAuthCommand && _enableX11Forwarding,
             // 只有 FTP 才落这块设置:其余协议保持 null,旧数据与旧版本读取零影响。
             Ftp = ConnectionType == ConnectionType.FTP
                 ? new FtpSettings

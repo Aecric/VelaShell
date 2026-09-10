@@ -216,28 +216,91 @@ public sealed class TmdsSshClientWrapper : ISshClientWrapper
         uint height,
         int bufferSize,
         IReadOnlyDictionary<TerminalMode, uint>? terminalModeValues = null,
+        X11ForwardingRequest? x11Forwarding = null,
         CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_client is null) throw new InvalidOperationException("Not connected.");
         try
         {
-            var options = new ExecuteOptions
-            {
-                AllocateTerminal = true,
-                TerminalType = terminalName,
-                TerminalWidth = (int)columns,
-                TerminalHeight = (int)rows,
-            };
-            RemoteProcess process = await _client
-                .ExecuteShellAsync(options, cancellationToken)
-                .ConfigureAwait(false);
+            RemoteProcess process = await OpenShellAsync(
+                _client, terminalName, columns, rows, x11Forwarding, cancellationToken).ConfigureAwait(false);
             return new ShellStreamWrapper(process);
         }
         catch (Exception ex) when (TmdsSshInterop.Translate(ex, cancellationToken) is { } translated)
         {
             throw translated;
         }
+    }
+
+    /// <summary>
+    /// 开 shell 通道。请求了 X11 而服务器不给时,**不带 X11 重开一次**。
+    /// <para>
+    /// 为什么要重开:库把 <c>x11-req</c> 放在 <c>OpenSessionAsync</c> 里、发在 pty-req **之前**,
+    /// 被 <c>CHANNEL_FAILURE</c> 回绝就整条 shell 开失败(库的文档也明说
+    /// "Failure to enable forwarding fails process creation")。而服务器
+    /// <c>X11Forwarding no</c> 是个再普通不过的配置 —— 因为它连普通终端都进不去,
+    /// 那就是拿一个可选功能绑走了主功能。<c>ssh -X</c> 在这种情况下也只是警告一句照常登录。
+    /// </para>
+    /// <para>
+    /// 不按异常消息文本判别是不是 X11 那一步失败的:那是库里的一句英文,改个措辞我们就瞎了。
+    /// 直接「不带 X11 再试一次」——真正坏在 pty-req 或 shell 上的话,第二次会在同一处再失败,
+    /// 抛出去的就是那个真实错误,X11 也不会被冤枉成原因。
+    /// </para>
+    /// </summary>
+    private static async Task<RemoteProcess> OpenShellAsync(
+        SshClient client,
+        string terminalName,
+        uint columns,
+        uint rows,
+        X11ForwardingRequest? x11Forwarding,
+        CancellationToken cancellationToken)
+    {
+        if (x11Forwarding is null)
+        {
+            return await client.ExecuteShellAsync(
+                BuildShellOptions(terminalName, columns, rows, null), cancellationToken).ConfigureAwait(false);
+        }
+        try
+        {
+            RemoteProcess process = await client.ExecuteShellAsync(
+                BuildShellOptions(terminalName, columns, rows, x11Forwarding.Settings), cancellationToken)
+                .ConfigureAwait(false);
+            x11Forwarding.MarkEnabled();
+            return process;
+        }
+        catch (SshChannelException ex)
+        {
+            RemoteProcess process = await client.ExecuteShellAsync(
+                BuildShellOptions(terminalName, columns, rows, null), cancellationToken).ConfigureAwait(false);
+            x11Forwarding.MarkRejectedByServer(ex.Message);
+            return process;
+        }
+    }
+
+    /// <summary>
+    /// pty-req 的选项。Tmds.Ssh 的 pty-req 只接受字符行列数:像素尺寸、bufferSize 与
+    /// terminalModeValues 无对应 API,被忽略(见 <see cref="CreateShellStreamAsync" /> 的注释)。
+    /// </summary>
+    private static ExecuteOptions BuildShellOptions(
+        string terminalName, uint columns, uint rows, X11ForwardingSettings? x11)
+    {
+        var options = new ExecuteOptions
+        {
+            AllocateTerminal = true,
+            TerminalType = terminalName,
+            TerminalWidth = (int)columns,
+            TerminalHeight = (int)rows,
+        };
+        if (x11 is not null)
+        {
+            // 这是全仓唯一一处 Reveal():cookie 从这里进库,再不出现在别处。
+            // 库只把自己随机生成的**替代** cookie 发给服务器,本机这一份留在进程内,
+            // 等远端 setup 通过校验后才用于连本机 X Server。
+            options.X11Forwarding = new X11ForwardingOptions(
+                x11.LocalEndPoint, x11.Cookie.Reveal(), x11.ScreenNumber);
+        }
+        return options;
     }
 
     /// <summary>

@@ -106,6 +106,7 @@ public class MainWindowViewModel : ReactiveObject, Services.Plugins.ITerminalRes
 
     private readonly IConnectionWorkflowService? _connectionWorkflowService;
     private readonly ISessionMetricsService? _metricsService;
+    private readonly IX11DisplayService? _x11DisplayService;
     private readonly IRemoteProcessService? _remoteProcessService;
 
     // ---- 会话日志(设置 → 常规 → 数据与存储) ----
@@ -268,7 +269,8 @@ public class MainWindowViewModel : ReactiveObject, Services.Plugins.ITerminalRes
         IAnnouncementFeed? announcementFeed = null,
         IUpdateService? updateService = null,
         IThemeService? themeService = null,
-        IConnectivityMonitor? connectivityMonitor = null
+        IConnectivityMonitor? connectivityMonitor = null,
+        IX11DisplayService? x11DisplayService = null
     )
     {
         // 注册表可注入(DI 里与插件命令桥共享同一单例);无 UI 单测传 null 时自建。
@@ -334,6 +336,7 @@ public class MainWindowViewModel : ReactiveObject, Services.Plugins.ITerminalRes
         _tunnelService = tunnelService;
         _tunnelWorkflowService = tunnelWorkflowService;
         _metricsService = metricsService;
+        _x11DisplayService = x11DisplayService;
         _terminalEmulatorFactory = terminalEmulatorFactory ?? (() => new VelaTerminalControl());
         Layout = new DockWorkspace();
         Layout.DocumentClosed += document =>
@@ -2430,11 +2433,16 @@ public class MainWindowViewModel : ReactiveObject, Services.Plugins.ITerminalRes
         // 先问一句对端是不是 POSIX shell,再决定要不要注入目录上报钩子(#305)。
         // 独立 exec 通道,用完即关;每台主机只探一次,之后走缓存。
         bool isPosixShell = await ProbePosixShellAsync(client, profile, settings, cancellationToken);
+        // X11:开关开着才探测。探不到只是少了图形窗口,终端照常连(原因在下面报给用户)。
+        X11DisplayProbe? x11Probe = await ProbeX11Async(profile, cancellationToken);
+        X11ForwardingRequest? x11 = ToX11Request(x11Probe);
         // 通道打开是网络往返(pty-req + shell,2~3 个 RTT);真异步 API,UI 线程零阻塞。
         IShellStreamWrapper shellStream = await client.CreateShellStreamAsync(
             terminalType.ToTermName(), 120, 32, 0, 0, 4096,
+            x11Forwarding: x11,
             cancellationToken: cancellationToken
         );
+        ReportX11(terminalTab, x11Probe, x11);
         terminalTab.SessionId = session.SessionId;
         terminalTab.AttachTransport(shellStream);
         terminalTab.Start();
@@ -2541,14 +2549,21 @@ public class MainWindowViewModel : ReactiveObject, Services.Plugins.ITerminalRes
                 );
             // 同 RunHandshakeAsync:注入前先确认对端是 POSIX shell(#305)。首连已探过的主机命中缓存,不再发探针。
             bool isPosixShell = await ProbePosixShellAsync(client, tab.Profile, settings, reconnectToken);
+            // 同 RunHandshakeAsync:X11 每次重连都重新探测 —— cookie 会随 X Server 重启而变,
+            // 而自动重连恰恰常发生在合盖唤醒之后。旧窗口不恢复,这是新的 display 映射。
+            X11DisplayProbe? x11Probe = await ProbeX11Async(tab.Profile, reconnectToken);
+            X11ForwardingRequest? x11 = ToX11Request(x11Probe);
             // 同 RunHandshakeAsync:通道打开走真异步 API,UI 线程零阻塞。
             IShellStreamWrapper shellStream = await client.CreateShellStreamAsync(
                 terminalType.ToTermName(), 120, 32, 0, 0, 4096,
+                x11Forwarding: x11,
                 cancellationToken: reconnectToken
             );
 
             // 在新会话输出到达前做一次完全复位(RIS),使新的标语不至于附加在旧缓冲内容之后。
             tab.TerminalEmulator.Feed("\ec"u8.ToArray());
+            // X11 的提示只能在 RIS 之后喂 —— 在它之前写的字会被这次复位一起擦掉。
+            ReportX11(tab, x11Probe, x11);
             tab.SessionId = session.SessionId;
             tab.AttachTransport(shellStream);
             tab.Start();
@@ -2594,6 +2609,54 @@ public class MainWindowViewModel : ReactiveObject, Services.Plugins.ITerminalRes
         }
     }
 
+
+    /// <summary>
+    /// 开 shell 之前探一次本机 X11 display。没开开关就返回 null(**没探过**,与「探了但不可用」
+    /// 是两件事:后者要给用户一句解释)。探测本身出意外也不该拖掉一次正常的 SSH 连接。
+    /// </summary>
+    private async Task<X11DisplayProbe?> ProbeX11Async(SessionProfile profile, CancellationToken cancellationToken)
+    {
+        if (!profile.EnableX11Forwarding || _x11DisplayService is null)
+        {
+            return null;
+        }
+        try
+        {
+            return await _x11DisplayService.ProbeAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // 权限、进程创建失败之类的意外:如实归到「xauth 跑不起来」,连接照常走下去。
+            return X11DisplayProbe.Failed(X11DisplayStatus.XauthFailed, ex.Message);
+        }
+    }
+
+    /// <summary>探测通过才带着请求去开 shell;不通过就当没开这个开关(终端与 SFTP 照常)。</summary>
+    private static X11ForwardingRequest? ToX11Request(X11DisplayProbe? probe) =>
+        probe is { IsAvailable: true } available ? new X11ForwardingRequest(available.Settings!) : null;
+
+    /// <summary>
+    /// 在终端里报一句 X11 的去向:本机探测失败的原因、服务器拒绝、或者已就绪。
+    /// <para>
+    /// **必须在那条 RIS 完全复位之后调**(重连路径上有一次 <c>\ec</c>)——
+    /// 在它之前喂的字会被一起擦掉,而"提示喂了却看不见"是最难查的一类。
+    /// </para>
+    /// </summary>
+    private static void ReportX11(TerminalTabViewModel tab, X11DisplayProbe? probe, X11ForwardingRequest? request)
+    {
+        if (probe is null)
+        {
+            return;
+        }
+        FeedNotice(tab, request?.Outcome == X11ForwardingOutcome.RejectedByServer
+            ? Strings.Get("Msg_X11RejectedByServer")
+            : X11NoticeText.Describe(probe));
+    }
+
+    /// <summary>往终端里喂一行灰色提示,与跳板链提示同一个样式。</summary>
+    private static void FeedNotice(TerminalTabViewModel tab, string message) =>
+        tab.TerminalEmulator.Feed(Encoding.UTF8.GetBytes($"\e[90m● {message}\e[0m\r\n"));
+
     /// <summary>
     /// 经由跳板建立的会话在终端顶部显示灰色提示,标注实际经过的跳板链路。
     /// 纯装饰,失败不影响连接。
@@ -2627,11 +2690,7 @@ public class MainWindowViewModel : ReactiveObject, Services.Plugins.ITerminalRes
             // 配置里跳板由内向外嵌套;反转成"本机 → 最外层跳板 → … → 目标"的阅读顺序。
             names.Reverse();
             string target = string.IsNullOrWhiteSpace(profile.Name) ? profile.Host : profile.Name;
-            string notice =
-                "\e[90m● "
-                + Strings.Format("Msg_JumpChainNotice", string.Join(" → ", names), target)
-                + "\e[0m\r\n";
-            tab.TerminalEmulator.Feed(Encoding.UTF8.GetBytes(notice));
+            FeedNotice(tab, Strings.Format("Msg_JumpChainNotice", string.Join(" → ", names), target));
         }
         catch
         {

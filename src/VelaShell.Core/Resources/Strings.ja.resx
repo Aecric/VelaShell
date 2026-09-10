@@ -4563,4 +4563,46 @@ Windows は exe のフルパスまたはコマンド名(例: notepad)、Linux �
   <data name="SetTransfer_AutoUploadOnEditDesc" xml:space="preserve">
     <value>オフの場合はローカルコピーを監視せず、変更を送り返しません</value>
   </data>
+  <data name="X11Forwarding" xml:space="preserve">
+    <value>Linux グラフィカルウィンドウ (X11)</value>
+  </data>
+  <data name="X11ForwardingHint" xml:space="preserve">
+    <value>リモートの X11 アプリ (xclock、GUI エディターなど) のウィンドウをこのデスクトップに直接開きます。サーバー側で X11Forwarding を有効にし、xauth が使える必要があります。信頼付き転送です: リモートアプリはこのディスプレイのキー入力と画面内容を読み取れます。</value>
+  </data>
+  <data name="X11TestLocalServer" xml:space="preserve">
+    <value>ローカル X サーバーをテスト</value>
+  </data>
+  <data name="Msg_X11Ready" xml:space="preserve">
+    <value>X11 転送が有効です (DISPLAY {0}) —— リモートのウィンドウはこのデスクトップに開きます</value>
+  </data>
+  <data name="Msg_X11RejectedByServer" xml:space="preserve">
+    <value>サーバーが X11 転送を拒否しました —— sshd_config で X11Forwarding yes を設定し、xauth をインストールしてください。ターミナル自体には影響しません。</value>
+  </data>
+  <data name="Msg_X11Unavailable" xml:space="preserve">
+    <value>X11 転送は無効です: {0}</value>
+  </data>
+  <data name="Msg_X11StatusPlatformUnsupported" xml:space="preserve">
+    <value>このプラットフォームは未対応です (このバージョンは Linux のみ)</value>
+  </data>
+  <data name="Msg_X11StatusNoDisplay" xml:space="preserve">
+    <value>ローカルの X ディスプレイが見つかりません (DISPLAY が未設定)</value>
+  </data>
+  <data name="Msg_X11StatusDisplayNotLocal" xml:space="preserve">
+    <value>DISPLAY がリモートの X サーバーを指しています。ローカルのみ対応です</value>
+  </data>
+  <data name="Msg_X11StatusDisplayMalformed" xml:space="preserve">
+    <value>DISPLAY の形式を解析できません</value>
+  </data>
+  <data name="Msg_X11StatusXauthMissing" xml:space="preserve">
+    <value>このマシンに xauth がありません (Debian/Ubuntu: apt install xauth)</value>
+  </data>
+  <data name="Msg_X11StatusXauthFailed" xml:space="preserve">
+    <value>xauth を実行できませんでした</value>
+  </data>
+  <data name="Msg_X11StatusCookieMissing" xml:space="preserve">
+    <value>このディスプレイの MIT-MAGIC-COOKIE-1 が xauth にありません</value>
+  </data>
+  <data name="Msg_X11StatusServerUnreachable" xml:space="preserve">
+    <value>ローカルの X サーバーが接続を受け付けません</value>
+  </data>
 </root>

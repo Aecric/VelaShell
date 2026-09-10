@@ -105,6 +105,22 @@ public class SessionProfile
     public const int MaxPostAuthCommandDelaySeconds = 60;
 
     /// <summary>
+    /// 这条配置的交互 shell 是否请求 X11 转发(远端图形应用的窗口出现在本机桌面),默认关。
+    /// <para>
+    /// 只存「要不要」这一个布尔。本机的 display、<c>XAUTHORITY</c> 路径、cookie 一概不存 ——
+    /// 前两个是**设备**的属性(同一条配置在台式机和笔记本上的 display 不一样),
+    /// 而 cookie 是凭据且会随 X Server 重启而变,每次建连由 <c>IX11DisplayService</c> 现探。
+    /// 于是这个字段可以安全地跟着配置走云同步:它不含任何本机信息。
+    /// </para>
+    /// <para>
+    /// ⚠️ 打开它默认按 **trusted** X11 转发处理(等价于 <c>ssh -Y</c> 而非 <c>ssh -X</c>):
+    /// 远端应用能读本机 X display 上的键盘输入与屏幕内容。第一版不实现 OpenSSH 的
+    /// X SECURITY 隔离,所以界面上必须把这句话说给用户看,别只写一句「开启图形窗口」。
+    /// </para>
+    /// </summary>
+    public bool EnableX11Forwarding { get; set; }
+
+    /// <summary>
     /// FTP / FTPS 的协议专属设置;仅在 <see cref="ConnectionType" /> 为
     /// <see cref="ConnectionType.FTP" /> 时有意义,其余协议为 null。
     /// </summary>
@@ -203,6 +219,7 @@ public class SessionProfile
             JumpHostProfileId = JumpHostProfileId,
             PostAuthCommand = PostAuthCommand,
             PostAuthCommandDelaySeconds = PostAuthCommandDelaySeconds,
+            EnableX11Forwarding = EnableX11Forwarding,
             Ftp = Ftp?.Clone(),
             PluginProtocolId = PluginProtocolId,
             PluginSettings = CloneSettings(PluginSettings),

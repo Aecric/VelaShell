@@ -97,7 +97,7 @@ public sealed class MainWindowSshFeatureTests
         };
         workflow.ConnectProfileAsync(profile, Arg.Any<CancellationToken>()).Returns(session);
         sshConnectionService.GetClient(session.SessionId).Returns(sshClient);
-        sshClient.CreateShellStreamAsync("xterm-256color", 120, 32, 0, 0, 4096, Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<CancellationToken>()).Returns(shellStream);
+        sshClient.CreateShellStreamAsync("xterm-256color", 120, 32, 0, 0, 4096, Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<X11ForwardingRequest?>(), Arg.Any<CancellationToken>()).Returns(shellStream);
 
         // 连接历史由工作流写入 SonnetDB;侧边栏“最近连接”刷新时从服务读取。
         IRecentConnectionService? recents = Substitute.For<IRecentConnectionService>();
@@ -182,6 +182,7 @@ public sealed class MainWindowSshFeatureTests
         sshConnectionService.GetClient(session.SessionId).Returns(sshClient);
         sshClient.CreateShellStreamAsync("xterm-256color", 120, 32, 0, 0, 4096,
                                          Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(),
+                                         Arg.Any<X11ForwardingRequest?>(),
                                          Arg.Any<CancellationToken>())
                  .Returns(shellStream);
 
@@ -296,7 +297,7 @@ public sealed class MainWindowSshFeatureTests
         };
         workflow.ConnectProfileAsync(profile, Arg.Any<CancellationToken>()).Returns(session);
         sshConnectionService.GetClient(session.SessionId).Returns(sshClient);
-        sshClient.CreateShellStreamAsync("xterm-256color", 120, 32, 0, 0, 4096, Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<CancellationToken>()).Returns(shellStream);
+        sshClient.CreateShellStreamAsync("xterm-256color", 120, 32, 0, 0, 4096, Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<X11ForwardingRequest?>(), Arg.Any<CancellationToken>()).Returns(shellStream);
         var vm = new MainWindowViewModel(workflow, sshConnectionService, () => terminal);
         TerminalTabViewModel? tab = await vm.TryConnectProfileAsync(profile);
         Assert.IsNotNull(tab);
@@ -426,7 +427,7 @@ public sealed class MainWindowSshFeatureTests
             Arg.Any<uint>(),
             Arg.Any<uint>(),
             Arg.Any<int>(),
-            Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<CancellationToken>());
+            Arg.Any<IReadOnlyDictionary<TerminalMode, uint>?>(), Arg.Any<X11ForwardingRequest?>(), Arg.Any<CancellationToken>());
     }
 
     [TestMethod]

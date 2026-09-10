@@ -30,6 +30,19 @@ public interface ISshClientWrapper : IDisposable
     /// 在当前连接上异步创建一条交互式 shell 流(打开通道 + pty-req + shell,2~3 个网络往返),
     /// 使用给定的终端类型、行列尺寸、像素尺寸、缓冲区大小及可选的终端模式参数。
     /// </summary>
+    /// <param name="terminalName">终端类型(<c>pty-req</c> 的 TERM,如 <c>xterm-256color</c>)。</param>
+    /// <param name="columns">终端列数(字符)。</param>
+    /// <param name="rows">终端行数(字符)。</param>
+    /// <param name="width">终端像素宽;当前实现(Tmds.Ssh)的 <c>pty-req</c> 无此参数,被忽略。</param>
+    /// <param name="height">终端像素高;同 <paramref name="width" />,被忽略。</param>
+    /// <param name="bufferSize">读缓冲字节数;当前实现无对应 API,被忽略。</param>
+    /// <param name="terminalModeValues">终端模式参数;当前实现无对应 API,被忽略。</param>
+    /// <param name="x11Forwarding">
+    /// 非 null 时在这条 shell 上请求 X11 转发(<c>x11-req</c>),远端图形应用的窗口出现在本机桌面。
+    /// 服务器拒绝时 shell 仍会建起来,结论写回 <see cref="X11ForwardingRequest.Outcome" /> ——
+    /// 拒绝图形转发不该把普通终端一起拖死。
+    /// </param>
+    /// <param name="cancellationToken">取消令牌。</param>
     Task<IShellStreamWrapper> CreateShellStreamAsync(
         string terminalName,
         uint columns,
@@ -38,6 +51,7 @@ public interface ISshClientWrapper : IDisposable
         uint height,
         int bufferSize,
         IReadOnlyDictionary<TerminalMode, uint>? terminalModeValues = null,
+        X11ForwardingRequest? x11Forwarding = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>在远端主机上执行一次性命令并返回其标准输出。</summary>

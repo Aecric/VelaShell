@@ -4563,4 +4563,46 @@ Windows는 exe 전체 경로 또는 명령 이름(예: notepad), Linux는 명령
   <data name="SetTransfer_AutoUploadOnEditDesc" xml:space="preserve">
     <value>끄면 로컬 사본을 감시하지 않으며 변경을 보내지 않습니다</value>
   </data>
+  <data name="X11Forwarding" xml:space="preserve">
+    <value>Linux 그래픽 창 (X11)</value>
+  </data>
+  <data name="X11ForwardingHint" xml:space="preserve">
+    <value>원격 X11 앱(xclock, GUI 편집기 등)의 창을 이 데스크톱에 바로 엽니다. 서버에서 X11Forwarding을 켜고 xauth를 쓸 수 있어야 합니다. 신뢰 전달 방식입니다: 원격 앱이 이 디스플레이의 키 입력과 화면 내용을 읽을 수 있습니다.</value>
+  </data>
+  <data name="X11TestLocalServer" xml:space="preserve">
+    <value>로컬 X 서버 테스트</value>
+  </data>
+  <data name="Msg_X11Ready" xml:space="preserve">
+    <value>X11 전달이 켜졌습니다 (DISPLAY {0}) —— 원격 그래픽 창이 이 데스크톱에 열립니다</value>
+  </data>
+  <data name="Msg_X11RejectedByServer" xml:space="preserve">
+    <value>서버가 X11 전달을 거부했습니다 —— sshd_config에서 X11Forwarding yes를 설정하고 xauth를 설치하세요. 터미널 자체는 영향을 받지 않습니다.</value>
+  </data>
+  <data name="Msg_X11Unavailable" xml:space="preserve">
+    <value>X11 전달이 꺼져 있습니다: {0}</value>
+  </data>
+  <data name="Msg_X11StatusPlatformUnsupported" xml:space="preserve">
+    <value>이 플랫폼은 아직 지원되지 않습니다 (이 버전은 Linux만)</value>
+  </data>
+  <data name="Msg_X11StatusNoDisplay" xml:space="preserve">
+    <value>로컬 X 디스플레이를 찾을 수 없습니다 (DISPLAY 미설정)</value>
+  </data>
+  <data name="Msg_X11StatusDisplayNotLocal" xml:space="preserve">
+    <value>DISPLAY가 원격 X 서버를 가리킵니다. 로컬만 지원합니다</value>
+  </data>
+  <data name="Msg_X11StatusDisplayMalformed" xml:space="preserve">
+    <value>DISPLAY 형식을 해석할 수 없습니다</value>
+  </data>
+  <data name="Msg_X11StatusXauthMissing" xml:space="preserve">
+    <value>이 컴퓨터에 xauth가 없습니다 (Debian/Ubuntu: apt install xauth)</value>
+  </data>
+  <data name="Msg_X11StatusXauthFailed" xml:space="preserve">
+    <value>xauth를 실행할 수 없습니다</value>
+  </data>
+  <data name="Msg_X11StatusCookieMissing" xml:space="preserve">
+    <value>이 디스플레이의 MIT-MAGIC-COOKIE-1 항목이 xauth에 없습니다</value>
+  </data>
+  <data name="Msg_X11StatusServerUnreachable" xml:space="preserve">
+    <value>로컬 X 서버가 연결을 받지 않습니다</value>
+  </data>
 </root>
