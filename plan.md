@@ -4631,3 +4631,28 @@ htop 事故),合成期间的方向键/回车/ESC 本来就不会编码下发。�
 - **没有验证的**:macOS / Linux 的实机输入法(本次只在 Windows + 微软拼音下看过实际效果);
   韩文那种「逐字节组字、每一击都在改同一个音节」的输入法;IMM32 的分段属性(已转换/未转换子句)
   —— Avalonia 不转发这份信息,因此整条合成串画成同一种样式。
+
+## 77. 2026-09-15 Linux 桌面图标:改用 XWayland 并对齐窗口标识
+
+GNOME 50 Wayland 下,deb 安装的图标文件与桌面入口均存在,运行中的窗口却显示为「未知」。
+检查 Avalonia 12.1.2 源码确认:原生 Wayland 后端未发送 `xdg_toplevel.set_app_id`,
+`WindowImpl.SetIcon` 也没有实现,主窗口已有的 `Icon` 因此不能建立桌面关联。
+
+经用户确认,宿主启动移除强制 `UseWayland()`,由 `UsePlatformDetect()` 在 Linux 选择
+X11(在 Wayland 会话中由 XWayland 承载)。显式配置 `X11PlatformOptions.WmClass`
+为 `VelaShell.App`,与 deb/AppImage 共用的桌面入口及 URL handler 的 `StartupWMClass`
+一致。Windows/macOS 的平台选择不受影响。鼠标指针模糊按用户要求不纳入本次修复。
+
+CI 的 push 分支列表加入 `fix/linux-icon`,推送修复分支即运行三平台构建与测试。
+
+验证:
+
+- `desktop-file-validate` 通过(仅原有多个主分类提示),`git diff --check` 通过。
+- 使用安装版的 Avalonia 依赖、相同 X11 配置和仓库的 `.ico` 构建最小窗口,零警告零错误。
+  在当前 GNOME Wayland / 200% 桌面实际启动,客户端窗口上报
+  `WM_CLASS = (dotnet, VelaShell.App)` 与 128×128 的 `_NET_WM_ICON`。
+  该标识与已安装桌面入口一致;检查覆盖了普通入口和 URL handler。
+- 全解决方案构建遇到现有 SDK 契约缺失:`VelaShell.Plugin.Ai/AiIcon.cs` 引用的
+  `VelaShell.PluginSdk.PluginIcon` 不存在。未修改 SDK 版本或制造本地 SDK 包。
+  仅构建宿主、复用现有项目产物也因产物契约不匹配失败。因此未完成完整应用构建、
+  测试套件及更新 deb 后的 Dock 实测;上述运行证据仅来自最小窗口。

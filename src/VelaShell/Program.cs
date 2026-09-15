@@ -359,9 +359,11 @@ internal static partial class Program
         AppBuilder.Configure<App>()
                   .UsePlatformDetect()
                   .With(new Win32PlatformOptions { RenderingMode = ResolveRenderingMode() })
-#if LINUX
-                  .UseWayland()
-#endif
+                  // Avalonia 12.1.2 的原生 Wayland 后端未发送 xdg_toplevel.app_id,
+                  // SetIcon 也是空实现,GNOME 因而把窗口显示为「未知」应用。
+                  // Linux 暂用 X11(在 Wayland 会话下由 XWayland 承载),并与
+                  // VelaShell.desktop 的 StartupWMClass 保持一致。
+                  .With(new X11PlatformOptions { WmClass = "VelaShell.App" })
                   .WithInterFont()
                   // 内置 Cascadia Mono(fonts:VelaShell 键,四静态字重):Linux/macOS 不自带,
                   // 内置才能三平台一致的终端字形。CJK 走系统回退(YaHei/PingFang/Noto)。

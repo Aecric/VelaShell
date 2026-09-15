@@ -9,9 +9,9 @@
 #     在 CI 上跑一遍只是白花时间,不跑也不会掩盖什么。
 #   * **本仓检出在 VelaShell/ 子目录**:文档仓库要与它并排(velashell-docs/),
 #     快捷键总表与《快捷键参考》的比对用例才找得到。所以各步都带 working-directory。
-#   * 矩阵带上 ubuntu:本进程内的 UI 测试走 Avalonia.Headless 不需要显示服务器,顺带把
-#     #if LINUX 的 UseWayland 分支也编译到 —— 那段代码在 Windows 上永远编译不到,回归了
-#     也看不见。唯一例外是隔离插件拉起的 PluginHost 子进程(见下方 matrix 的 launcher)。
+#   * 矩阵带上 ubuntu:本进程内的 UI 测试走 Avalonia.Headless 不需要显示服务器,
+#     同时覆盖 Linux 构建。宿主使用 X11/XWayland;隔离插件拉起的 PluginHost 子进程
+#     需要真正的显示服务器(见下方 matrix 的 launcher)。
 #   * -warnaserror:当前基线就是 0 警告,守住它。
 #   * **不加** dotnet format --verify-no-changes:CRLF 工作树与 end_of_line = lf 的
 #     .editorconfig 会产生十几万条 ENDOFLINE 噪音,先把换行统一了再加这一步。
@@ -19,7 +19,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix/linux-icon]
   pull_request:
 
 # 同一分支上新推送会取消上一次还在跑的检查:PR 连推几次时不必把 runner 全占满。
